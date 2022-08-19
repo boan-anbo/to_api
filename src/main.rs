@@ -1,26 +1,60 @@
+use std::net::SocketAddr;
+
 use axum::{
-    routing::{get, post},
     http::StatusCode,
+    Json,
     response::IntoResponse,
-    Json, Router,
+    Router, routing::{get, post},
 };
 use serde::{Deserialize, Serialize};
-use std::net::SocketAddr;
 use to_core::to::to_dto::{TextualObjectAddManyDto, TextualObjectStoredReceipt};
 use to_core::to::to_struct::TextualObject;
 use to_core::to_machine::to_machine_struct::TextualObjectMachine;
+use utoipa::{
+    Modify,
+    OpenApi, openapi::security::{ApiKey, ApiKeyValue, SecurityScheme},
+};
+use utoipa_swagger_ui::SwaggerUi;
+
+use controllers::{add_tos, find_tos};
+
+mod controllers;
 
 #[tokio::main]
 async fn main() {
+    #[derive(OpenApi)]
+    #[openapi(
+
+    paths(
+    controllers::add_tos,
+    controllers::find_tos,
+    ),
+    components(
+    schemas(
+    to_core::to::to_dto::TextualObjectAddManyDto,
+    to_core::to::to_dto::TextualObjectAddDto,
+    to_core::to::to_dto::TextualObjectStoredReceipt,
+    to_core::to::to_dto::TextualObjectFindRequestDto,
+    to_core::to::to_dto::TextualObjectFindResultDto,
+    )
+    ),
+    tags(
+    (name = "ToApi", description = "Textual Object Api")
+    )
+
+    )]
+    struct ApiDoc;
     // initialize tracing
     tracing_subscriber::fmt::init();
 
     // build our application with a route
     let app = Router::new()
+        .merge(SwaggerUi::new("/swagger-ui/*tail").url("/api-doc/openapi.json", ApiDoc::openapi()))
         // `GET /` goes to `root`
         .route("/", get(root))
         // `POST /users` goes to `create_user`
-        .route("/add_tos", post(add_tos));
+        .route("/add_tos", post(add_tos))
+        .route("/find_tos", post(find_tos));
 
 
     // run our app with hyper
@@ -35,27 +69,6 @@ async fn main() {
 
 // basic handler that responds with a static string
 async fn root() -> &'static str {
-    "Hello, World!"
+    "Hello, Textual World!"
 }
 
-async fn add_tos(
-    // this argument tells axum to parse the request body
-    // as JSON into a `CreateUser` type
-    Json(_payload): Json<TextualObjectAddManyDto>,
-) -> impl IntoResponse {
-    // insert your application logic here
-
-    let mut tom = TextualObjectMachine::new_from_dto(
-        &_payload ).await;
-
-    // this will be converted into a JSON response
-    // with a status code of `201 Created`
-    let receipt = tom.add_tos(_payload).await;
-    (StatusCode::CREATED, Json(receipt))
-}
-
-#[derive(Serialize, Deserialize)]
-struct AddCard {
-    db_path: String,
-    json: String,
-}
