@@ -6,7 +6,6 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
-use to_core::to::to_struct::TextualObject;
 
 #[tokio::main]
 async fn main() {
@@ -42,11 +41,11 @@ async fn add_card(
     Json(payload): Json<AddCard>,
 ) -> impl IntoResponse {
     // insert your application logic here
-    let user = TextualObject::get_sample();
+    // let user = TextualObject::get_sample();
 
     // this will be converted into a JSON response
     // with a status code of `201 Created`
-    (StatusCode::CREATED, Json(user));
+    (StatusCode::CREATED, Json(String::new()));
 }
 
 #[derive(Serialize, Deserialize)]
