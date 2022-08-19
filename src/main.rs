@@ -6,6 +6,9 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
+use to_core::to::to_dto::{TextualObjectAddManyDto, TextualObjectStoredReceipt};
+use to_core::to::to_struct::TextualObject;
+use to_core::to_machine::to_machine_struct::TextualObjectMachine;
 
 #[tokio::main]
 async fn main() {
@@ -17,7 +20,7 @@ async fn main() {
         // `GET /` goes to `root`
         .route("/", get(root))
         // `POST /users` goes to `create_user`
-        .route("/users", post(add_card));
+        .route("/add_tos", post(add_tos));
 
 
     // run our app with hyper
@@ -35,17 +38,20 @@ async fn root() -> &'static str {
     "Hello, World!"
 }
 
-async fn add_card(
+async fn add_tos(
     // this argument tells axum to parse the request body
     // as JSON into a `CreateUser` type
-    Json(payload): Json<AddCard>,
+    Json(_payload): Json<TextualObjectAddManyDto>,
 ) -> impl IntoResponse {
     // insert your application logic here
-    // let user = TextualObject::get_sample();
+
+    let mut tom = TextualObjectMachine::new_from_dto(
+        &_payload ).await;
 
     // this will be converted into a JSON response
     // with a status code of `201 Created`
-    (StatusCode::CREATED, Json(String::new()));
+    let receipt = tom.add_tos(_payload).await;
+    (StatusCode::CREATED, Json(receipt))
 }
 
 #[derive(Serialize, Deserialize)]
