@@ -2,59 +2,35 @@ use std::net::SocketAddr;
 
 use axum::{
     http::StatusCode,
-    Json,
     response::IntoResponse,
     Router, routing::{get, post},
 };
-use serde::{Deserialize, Serialize};
-use to_core::to::to_dto::{TextualObjectAddManyDto, TextualObjectStoredReceipt};
-use to_core::to::to_struct::TextualObject;
-use to_core::to_machine::to_machine_struct::TextualObjectMachine;
-use utoipa::{
-    Modify,
-    OpenApi, openapi::security::{ApiKey, ApiKeyValue, SecurityScheme},
-};
+use tracing::Level;
+use tracing_subscriber::FmtSubscriber;
 use utoipa_swagger_ui::SwaggerUi;
 
-use controllers::{add_tos, find_tos};
+use crate::controllers::tos::{add_tos, find_tos};
 
 mod controllers;
+mod app;
+pub mod api_doc;
+pub mod api_paths;
+pub(crate) mod test_utils;
 
 #[tokio::main]
 async fn main() {
-    #[derive(OpenApi)]
-    #[openapi(
+    // initialize .env
+    dotenv::dotenv().ok();
 
-    paths(
-    controllers::add_tos,
-    controllers::find_tos,
-    ),
-    components(
-    schemas(
-    to_core::to::to_dto::TextualObjectAddManyDto,
-    to_core::to::to_dto::TextualObjectAddDto,
-    to_core::to::to_dto::TextualObjectStoredReceipt,
-    to_core::to::to_dto::TextualObjectFindRequestDto,
-    to_core::to::to_dto::TextualObjectFindResultDto,
-    )
-    ),
-    tags(
-    (name = "ToApi", description = "Textual Object Api")
-    )
-
-    )]
-    struct ApiDoc;
     // initialize tracing
-    tracing_subscriber::fmt::init();
+    // tracing_subscriber::fmt::init();
 
-    // build our application with a route
-    let app = Router::new()
-        .merge(SwaggerUi::new("/swagger-ui/*tail").url("/api-doc/openapi.json", ApiDoc::openapi()))
-        // `GET /` goes to `root`
-        .route("/", get(root))
-        // `POST /users` goes to `create_user`
-        .route("/add_tos", post(add_tos))
-        .route("/find_tos", post(find_tos));
+    let subscriber = FmtSubscriber::builder()
+        .with_max_level(Level::DEBUG)
+        .finish();
+    tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
+
+    let app = app::get_app();
 
 
     // run our app with hyper
